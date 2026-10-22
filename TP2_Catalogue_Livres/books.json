@@ -1,0 +1,7 @@
+[
+  {"id": 1, "title": "Le Petit Prince", "author": "Antoine de Saint-Exupéry", "year": 1943, "genre": "Roman", "isFav": true, "keywords": ["voyage", "amitié"]},
+  {"id": 2, "title": "1984", "author": "George Orwell", "year": 1949, "genre": "Science-fiction", "isFav": false, "keywords": ["dystopie", "politique"]},
+  {"id": 3, "title": "Harry Potter à l'école des sorciers", "author": "J. K. Rowling", "year": 1997, "genre": "Fantastique", "isFav": true, "keywords": ["magie", "aventure"]},
+  {"id": 4, "title": "Clean Code", "author": "Robert C. Martin", "year": 2008, "genre": "Développement", "isFav": false, "keywords": ["programmation", "qualité"]},
+  {"id": 5, "title": "L'Étranger", "author": "Albert Camus", "year": 1942, "genre": "Roman", "isFav": false, "keywords": ["classique", "philosophie"]}
+]

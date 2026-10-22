@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TP 2 - Catalogue de livres | Vue.js</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+</head>
+<body>
+  <div id="app" v-cloak>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand"><div><span class="brand-name">Ma Bibliothèque</span><span class="brand-subtitle">Formulaires & événements</span></div></div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="intro">
+        <div><div class="eyebrow">GESTION DE LIVRES</div><h1>Votre catalogue, <span>en un seul endroit.</span></h1><p>Ajoutez vos livres, organisez les mots-clés et marquez vos favoris d'un simple clic.</p></div>
+        <div class="stats">
+          <div class="stat"><strong>{{ books.length }}</strong><small>Livres</small></div>
+          <div class="stat"><strong>{{ nombreFavoris }}</strong><small>Favoris</small></div>
+        </div>
+      </section>
+
+      <div class="layout">
+        <section class="panel form-panel" aria-label="Formulaire d'ajout">
+          <div class="panel-heading"><span class="panel-symbol">＋</span><div><h2>Ajouter un livre</h2><p>Complétez les informations ci-dessous</p></div></div>
+          <!-- PARTIE 1 : formulaire + v-model + @submit.prevent -->
+          <form @submit.prevent="ajouterLivre">
+            <div class="field"><label for="title">Titre <span>*</span></label><input id="title" type="text" v-model.trim="newBook.title" placeholder="Ex. Le Petit Prince"></div>
+            <div class="field"><label for="author">Auteur <span>*</span></label><input id="author" type="text" v-model.lazy="newBook.author" placeholder="Ex. Antoine de Saint-Exupéry"></div>
+            <div class="field-grid">
+              <div class="field"><label for="year">Année</label><input id="year" type="number" v-model.number="newBook.year" min="0" max="2100" placeholder="1943"></div>
+              <div class="field"><label for="genre">Genre</label><select id="genre" v-model="newBook.genre"><option value="Roman">Roman</option><option value="Science-fiction">Science-fiction</option><option value="Fantastique">Fantastique</option><option value="Développement">Développement</option><option value="Autre">Autre</option></select></div>
+            </div>
+            <label class="checkbox-line"><input type="checkbox" v-model="newBook.isFav"><span>Ajouter aux favoris <span aria-hidden="true"></span></span></label>
+
+            <!-- PARTIE 5 : ajouter un mot-clé avec Enter, sans soumettre le formulaire -->
+            <div class="field keywords-field"><label for="keyword">Mots-clés</label><input id="keyword" type="text" v-model="nouveauMotCle" @keydown.enter.prevent @keyup.enter="ajouterMotCle" placeholder="Écrivez un mot puis appuyez sur Entrée"><small>Appuyez sur Entrée pour ajouter un mot-clé (sans doublon).</small></div>
+            <div class="chip-group" v-if="newBook.keywords.length > 0"><span class="chip" v-for="mot in newBook.keywords" :key="mot">{{ mot }} <button type="button" @click="retirerMotCle(mot)" :aria-label="'Retirer le mot-clé ' + mot">×</button></span></div>
+
+            <!-- PARTIE 2 : bouton désactivé tant que title / author sont vides -->
+            <button class="btn btn-primary btn-full" type="submit" :disabled="!formulaireValide">Ajouter le livre <span aria-hidden="true">→</span></button>
+            <p class="form-hint">* Champs obligatoires</p>
+          </form>
+        </section>
+
+        <section class="catalogue" aria-label="Catalogue">
+          <div class="catalogue-heading"><div><h2>Collection de livres</h2><p>Explorez et gérez votre bibliothèque</p></div><div class="count-pill">{{ booksAffiches.length }} résultat<span v-if="booksAffiches.length !== 1">s</span></div></div>
+          <div class="filters"><input v-model="recherche" type="search" aria-label="Rechercher un livre" placeholder="⌕  Rechercher par titre ou auteur..."><select v-model="filtreGenre" aria-label="Filtrer par genre"><option value="tous">Tous les genres</option><option value="Roman">Roman</option><option value="Science-fiction">Science-fiction</option><option value="Fantastique">Fantastique</option><option value="Développement">Développement</option><option value="Autre">Autre</option></select></div>
+          <p v-if="erreurChargement" class="notice">{{ erreurChargement }}</p>
+          <div class="books-grid" v-if="booksAffiches.length > 0">
+            <!-- PARTIES 3 & 4 : clic sur carte pour favori, .stop sur Supprimer -->
+            <div class="book" v-for="book in booksAffiches" :key="book.id" @click="toggleFavori(book)" :class="{ 'book-favorite': book.isFav }" :title="'Cliquer pour ' + (book.isFav ? 'retirer des' : 'ajouter aux') + ' favoris'">
+              <div class="book-head"><span class="genre-tag">{{ book.genre }}</span><span class="favorite-indicator" :aria-label="book.isFav ? 'Favori' : 'Non favori'">{{ book.isFav ? '★' : '☆' }}</span></div>
+              <div class="book-art" aria-hidden="true">{{ iconeGenre(book.genre) }}</div>
+              <h3>{{ book.title }}</h3><p class="book-author">{{ book.author }}</p><p class="book-year">{{ book.year || 'Année inconnue' }}</p>
+              <div class="book-keywords"><span class="small-chip" v-for="mot in (book.keywords || [])" :key="mot">#{{ mot }}</span></div>
+              <div class="book-footer"><span class="fav-text">{{ book.isFav ? '★ Dans les favoris' : '☆ Ajouter aux favoris' }}</span><button type="button" class="btn-delete" @click.stop="supprimerLivre(book)">Supprimer</button></div>
+            </div>
+          </div>
+          <div class="empty-state" v-else><h3>Aucun livre trouvé</h3><p>Ajoutez un livre ou modifiez votre recherche.</p></div>
+        </section>
+      </div>
+      <footer>ENSA Safi · TP 2 — Catalogue de livres · Vue.js 3</footer>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
