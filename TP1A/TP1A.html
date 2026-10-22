@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TP 1A - Budget étudiant</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        body { font-family: "Segoe UI", "Trebuchet MS", sans-serif; max-width: 850px; margin: 30px auto; padding: 0 15px; background: #f0f7f1; color: #20352a; }
+        #app { background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 3px 14px #00000012; }
+        h1 { color: #176b3a; font-family: "Trebuchet MS", "Segoe UI", sans-serif; }
+        section { margin-top: 25px; padding-top: 10px; border-top: 1px solid #d5e5d8; }
+        h2 { color: #285c3b; }
+        input, select { border: 1px solid #b8d0bd; border-radius: 6px; font: inherit; }
+        input:focus, select:focus { outline: 2px solid #9bd2aa; border-color: #23834a; }
+        label { display: block; margin: 10px 0 5px; }
+        input, select { padding: 9px; width: 100%; max-width: 400px; box-sizing: border-box; }
+        button { padding: 9px 13px; margin: 5px 5px 5px 0; border: 1px solid #a8c9b1; background: #ffffff; border-radius: 6px; cursor: pointer; }
+        button:hover { background: #e4f3e7; }
+        button.active, button.principal { color: white; background: #23834a; border-color: #23834a; }
+        .ok { color: #187544; }
+        .attention { color: #a96808; }
+        .depasse { color: #b42332; }
+        li { margin: 10px 0; }
+        .statistiques { background: #edf7ef; padding: 12px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <h1>Budget étudiant</h1>
+
+   
+    <label for="budget">Budget mensuel (DH) :</label>
+    <input id="budget" type="number" min="1" step="0.01" v-model.number="budgetMensuel">
+
+    
+    <section>
+        <h2>Ajouter une dépense</h2>
+        <form @submit.prevent="ajouterDepense">
+            <label for="titre">Titre :</label>
+            <input id="titre" type="text" v-model="nouvelleDepense.titre" required>
+
+            <label for="montant">Montant (DH) :</label>
+            <input id="montant" type="number" min="0.01" step="0.01"
+                   v-model.number="nouvelleDepense.montant" required>
+
+            <label for="categorie">Catégorie :</label>
+            <select id="categorie" v-model="nouvelleDepense.categorie">
+                <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+            </select>
+
+            <!-- Bonus : date -->
+            <label for="date">Date :</label>
+            <input id="date" type="date" v-model="nouvelleDepense.date" required>
+
+            <p><button type="submit" class="principal">Ajouter</button></p>
+        </form>
+    </section>
+
+    
+    <section>
+        <h2>Filtrer par catégorie</h2>
+        <button @click="selectionnerCategorie('toutes')"
+                :class="{ active: filtreCategorie === 'toutes' }">Toutes</button>
+        <button v-for="cat in categories" :key="cat"
+                @click="selectionnerCategorie(cat)"
+                :class="{ active: filtreCategorie === cat }">{{ cat }}</button>
+    </section>
+
+   
+    <section>
+        <h2>Résumé</h2>
+        <p>Total du filtre : <strong>{{ totalFiltre.toFixed(2) }} DH</strong></p>
+        <p>Total général : <strong>{{ totalGeneral.toFixed(2) }} DH</strong></p>
+        <p>Moyenne des dépenses affichées : <strong>{{ moyenneDepense.toFixed(2) }} DH</strong></p>
+
+        
+        <div v-if="budgetMensuel > 0">
+            <p v-if="totalGeneral < budgetMensuel * 0.8" class="ok">
+                Budget OK : moins de 80 % utilisé.
+            </p>
+            <p v-else-if="totalGeneral <= budgetMensuel" class="attention">
+                Warning : au moins 80 % du budget utilisé.
+            </p>
+            <p v-else class="depasse">
+                Budget dépassé !
+            </p>
+        </div>
+        <p v-else class="depasse">Saisissez un budget mensuel supérieur à 0.</p>
+    </section>
+
+    
+    <section>
+        <button @click="afficherStats = !afficherStats">
+            {{ afficherStats ? 'Masquer' : 'Afficher' }} le détail par catégorie
+        </button>
+        <div v-show="afficherStats" class="statistiques">
+            <p v-for="cat in categories" :key="cat">
+                {{ cat }} : <strong>{{ totalCategorie(cat).toFixed(2) }} DH</strong>
+            </p>
+        </div>
+    </section>
+
+
+    <section>
+        <h2>Liste des dépenses</h2>
+        <ul v-if="depensesFiltrees.length > 0">
+            <li v-for="d in depensesFiltrees" :key="d.id">
+                {{ d.titre }} - {{ d.montant.toFixed(2) }} DH
+                - {{ d.categorie }} - {{ d.date }}
+                <button @click="supprimerDepense(d)">Supprimer</button>
+            </li>
+        </ul>
+        <p v-else>Broke haha.</p>
+    </section>
+</div>
+
+<script>
+const app = Vue.createApp({
+    data() {
+        return {
+            budgetMensuel: 1000,
+            categories: ["Alimentation", "Transport", "Loisirs", "Autres"],
+            filtreCategorie: "toutes",
+            afficherStats: false,
+            prochainId: 1,
+            nouvelleDepense: {
+                titre: "",
+                montant: null,
+                categorie: "Alimentation",
+                date: new Date().toISOString().slice(0, 10)
+            },
+            depenses: []
+        };
+    },
+
+    computed: {
+        depensesFiltrees() {
+            const resultat = [];
+            for (const d of this.depenses) {
+                if (this.filtreCategorie === "toutes" || d.categorie === this.filtreCategorie) {
+                    // Bonus : insertion du plus récent au plus ancien, sans sort()
+                    let i = 0;
+                    while (i < resultat.length && resultat[i].date >= d.date) {
+                        i++;
+                    }
+                    resultat.splice(i, 0, d);
+                }
+            }
+            return resultat;
+        },
+        totalFiltre() {
+            return this.depensesFiltrees.reduce((total, d) => total + d.montant, 0);
+        },
+        totalGeneral() {
+            return this.depenses.reduce((total, d) => total + d.montant, 0);
+        },
+        moyenneDepense() {
+            if (this.depensesFiltrees.length === 0) return 0;
+            return this.totalFiltre / this.depensesFiltrees.length;
+        }
+    },
+
+    methods: {
+        selectionnerCategorie(cat) {
+            this.filtreCategorie = cat;
+        },
+        totalCategorie(cat) {
+            return this.depenses
+                .filter(d => d.categorie === cat)
+                .reduce((total, d) => total + d.montant, 0);
+        },
+        ajouterDepense() {
+            if (!this.nouvelleDepense.titre.trim() ||
+                !Number.isFinite(this.nouvelleDepense.montant) ||
+                this.nouvelleDepense.montant <= 0 ||
+                !this.nouvelleDepense.date) {
+                return;
+            }
+
+            this.depenses.push({
+                id: this.prochainId++,
+                titre: this.nouvelleDepense.titre.trim(),
+                montant: this.nouvelleDepense.montant,
+                categorie: this.nouvelleDepense.categorie,
+                date: this.nouvelleDepense.date
+            });
+
+            this.nouvelleDepense = {
+                titre: "",
+                montant: null,
+                categorie: "Alimentation",
+                date: new Date().toISOString().slice(0, 10)
+            };
+        },
+        supprimerDepense(depense) {
+            this.depenses = this.depenses.filter(d => d.id !== depense.id);
+        }
+    }
+});
+
+app.mount("#app");
+</script>
+</body>
+</html>
