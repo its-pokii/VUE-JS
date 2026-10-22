@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Catalogue de livres</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <p>{{ nombreFavoris }} livre(s) favori(s)</p>
+      <h1>Catalogue de livres</h1>
+      <div v-for="book in books" :key="book.id" class="book">
+        <h2>{{ book.title }}</h2>
+        <p>author: {{ book.author }}</p>
+        <p>year: {{ book.year }}</p>
+
+        <button @click="toggleDetails(book)">Détails</button>
+
+        <p v-show="showDetails[book.id]">Genre : {{ book.genre }}</p>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
