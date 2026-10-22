@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de bord de notes</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        :root {
+            font-family: Inter, "Segoe UI", Arial, sans-serif;
+            color: #176b3a;
+            background: #f3f6fb;
+            font-synthesis: none;
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; }
+        button, input { font: inherit; }
+        button { cursor: pointer; }
+        [v-cloak] { display: none; }
+        .entete { background: linear-gradient(120deg, #12532d, #176b3a); color: #fff; padding: 38px 22px 76px; }
+        .entete-interieur { max-width: 1080px; margin: auto; }
+        .surtitre { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; font-weight: 750; opacity: .8; }
+        h1 { margin: 10px 0 7px; font-size: clamp(25px, 4.3vw, 38px); }
+        .entete p { margin: 0; color: #dbe8ff; }
+        main { max-width: 1080px; padding: 0 18px 50px; margin: -43px auto 0; position: relative; }
+        .cartes { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; margin-bottom: 19px; }
+        .carte, .panneau { background: white; border: 1px solid #e0e6f1; border-radius: 14px; box-shadow: 0 4px 15px rgba(20, 43, 83, .045); }
+        .carte { padding: 18px; min-width: 0; }
+        .carte .legende { color: #64738f; font-weight: 650; font-size: 13px; }
+        .carte .valeur { font-size: 26px; font-weight: 800; margin: 8px 0 6px; overflow-wrap: anywhere; }
+        .carte small { color: #78859a; }
+        .mention { display: inline-block; font-size: 13px; padding: 5px 10px; border-radius: 999px; font-weight: 750; }
+        .tres-bien, .bien, .ok { background: #dcfce7; color: #166534; }
+        .assez-bien, .passable { background: #fef3c7; color: #92400e; }
+        .insuffisant, .rattrapage { background: #fee2e2; color: #991b1b; }
+        .neutre { background: #edf2fa; color: #4c617c; }
+        .panneau { padding: 22px; margin-bottom: 18px; }
+        .titre-ligne { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 17px; }
+        h2 { font-size: 18px; margin: 0; }
+        .description { margin: 0 0 17px; color: #68778f; font-size: 14px; }
+        .grille { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+        label { display: block; font-weight: 650; font-size: 13px; margin: 0 0 7px; }
+        input { width: 100%; border: 1px solid #ccd6e4; border-radius: 9px; padding: 11px 12px; background: #fff; outline: 0; min-height: 43px; }
+        input:focus { border-color: #26af5f; box-shadow: 0 0 0 3px rgba(38, 175, 95, .12); }
+        .champ { margin-bottom: 13px; }
+        .ligne-formulaire { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+        .bouton { padding: 10px 14px; border: 0; border-radius: 9px; font-weight: 750; background: #26af5f; color: white; }
+        .bouton:hover { background: #176b3a; }
+        .secondaire { background: #eff3ff; color: #176b3a; }
+        .secondaire:hover { background: #e0e8ff; }
+        .supprimer { background: #fff1f2; color: #ad1f35; }
+        .supprimer:hover { background: #ffe4e6; }
+        .outil { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .outil input { width: min(100%, 310px); }
+        .compteur { font-size: 13px; color: #64738f; }
+        .module { border: 1px solid #e3e8f1; border-radius: 11px; padding: 15px; margin: 12px 0; }
+        .ligne-module { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; align-items: center; }
+        .nom { font-weight: 780; font-size: 16px; margin-bottom: 6px; }
+        .sous-texte { color: #708099; font-size: 13px; }
+        .note { font-weight: 800; font-size: 20px; text-align: right; }
+        .note.faible { color: #bd2936; }
+        .note.bonne { color: #21734a; }
+        .barre { background: #e8edf6; height: 7px; border-radius: 999px; margin: 15px 0 12px; overflow: hidden; }
+        .progression { height: 100%; background: #26af5f; border-radius: 999px; transition: width .2s; }
+        .progression.faible { background: #e25360; }
+        .actions { display: flex; flex-wrap: wrap; gap: 9px; }
+        .actions .bouton { font-size: 13px; padding: 8px 10px; }
+        .detail { margin-top: 13px; border-top: 1px solid #e4e9f2; padding-top: 14px; color: #526179; font-size: 14px; line-height: 1.8; }
+        .vide { padding: 22px 10px; color: #7a879a; text-align: center; border: 1px dashed #d3dbe9; border-radius: 10px; }
+        .ligne-stat { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid #edf0f7; font-size: 14px; }
+        .ligne-stat:last-child { border-bottom: 0; }
+        .bloc-alerte { background: #fff1f2; border: 1px solid #fecdd3; color: #9f2439; border-radius: 10px; padding: 13px 15px; margin-bottom: 16px; }
+        .bloc-succes { background: #ecfdf3; color: #166534; border: 1px solid #bbf7d0; border-radius: 10px; padding: 13px 15px; margin-bottom: 16px; }
+        .liste-rattrapage { margin: 8px 0 0; padding-left: 20px; line-height: 1.9; }
+        .footer { text-align: center; color: #8190a8; font-size: 12px; padding: 8px 0 18px; }
+        @media (max-width: 760px) {
+            .cartes { grid-template-columns: repeat(2, minmax(0,1fr)); }
+            .grille { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 420px) {
+            .cartes { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .carte { padding: 13px; }
+            .carte .valeur { font-size: 21px; }
+            .panneau { padding: 15px; }
+            .ligne-formulaire { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <header class="entete">
+        <div class="entete-interieur">
+            <h1>Tableau de bord de notes</h1>
+            <p>Suivi du semestre · classement des modules</p>
+        </div>
+    </header>
+
+    <main>
+        <section class="cartes">
+            <div class="carte">
+                <div class="legende">Moyenne générale</div>
+                <div class="valeur">{{ moyenneGenerale.toFixed(2) }} <small>/20</small></div>
+                <small>Calcul pondéré par coefficient</small>
+            </div>
+
+            <!-- PARTIE 2 : chaîne de cinq conditions adjacentes -->
+            <div class="carte">
+                <div class="legende">Mention automatique</div>
+                <div class="valeur" style="font-size: 19px; margin-top: 13px;">
+                    <span v-if="modules.length === 0" class="mention neutre">Aucune note</span>
+                    <template v-else>
+                        <span v-if="moyenneGenerale >= 16" class="mention tres-bien">Très bien</span>
+                        <span v-else-if="moyenneGenerale >= 14" class="mention bien">Bien</span>
+                        <span v-else-if="moyenneGenerale >= 12" class="mention assez-bien">Assez bien</span>
+                        <span v-else-if="moyenneGenerale >= 10" class="mention passable">Passable</span>
+                        <span v-else class="mention insuffisant">Insuffisant</span>
+                    </template>
+                </div>
+                <small>Selon la moyenne générale</small>
+            </div>
+            <div class="carte">
+                <div class="legende">Nombre de modules</div>
+                <div class="valeur">{{ modules.length }}</div>
+                <small>Modules du semestre</small>
+            </div>
+            <div class="carte">
+                <div class="legende">À rattraper</div>
+                <div class="valeur" :style="{ color: modulesARattraper.length ? '#b4233b' : '#177245' }">
+                    {{ modulesARattraper.length }}
+                </div>
+                <small>Notes strictement inférieures à 10</small>
+            </div>
+        </section>
+
+        <div v-if="modules.length > 0 && tousValides()" class="bloc-succes">
+            ✅ Tous les modules sont validés (note ≥ 10/20).
+        </div>
+        <div v-else-if="modulesARattraper.length > 0" class="bloc-alerte">
+            ⚠ Attention : {{ modulesARattraper.length }} module(s) à rattraper.
+        </div>
+
+        <div class="grille">
+            <section class="panneau">
+                <h2>Ajouter un module</h2>
+                <p class="description">Renseignez la note et le coefficient.</p>
+                <form @submit.prevent="ajouterModule">
+                    <div class="champ">
+                        <label for="nomModule">Nom du module</label>
+                        <input id="nomModule" v-model.trim="nouveauModule.nom" type="text"
+                               placeholder="Ex. : Programmation Java" required maxlength="80">
+                    </div>
+                    <div class="ligne-formulaire">
+                        <div class="champ">
+                            <label for="noteModule">Note /20</label>
+                            <input id="noteModule" v-model.number="nouveauModule.note" type="number"
+                                   min="0" max="20" step="0.01" placeholder="15" required>
+                        </div>
+                        <div class="champ">
+                            <label for="coefficientModule">Coefficient</label>
+                            <input id="coefficientModule" v-model.number="nouveauModule.coefficient" type="number"
+                                   min="0.01" step="0.01" placeholder="2" required>
+                        </div>
+                    </div>
+                    <button class="bouton" type="submit">+ Ajouter le module</button>
+                </form>
+            </section>
+
+            <section class="panneau">
+                <div class="titre-ligne">
+                    <h2>Résumé du semestre</h2>
+                    <span class="mention" :class="modulesARattraper.length ? 'rattrapage' : 'ok'">
+                        {{ modulesARattraper.length }} à rattraper
+                    </span>
+                </div>
+                <div class="ligne-stat">
+                    <span>🏆 Meilleur module</span>
+                    <strong v-if="moduleMax">{{ moduleMax.nom }} ({{ moduleMax.note }}/20)</strong>
+                    <span v-else>—</span>
+                </div>
+                <div class="ligne-stat">
+                    <span>📉 Moins bon module</span>
+                    <strong v-if="moduleMin">{{ moduleMin.nom }} ({{ moduleMin.note }}/20)</strong>
+                    <span v-else>—</span>
+                </div>
+                <div class="ligne-stat">
+                    <span>Somme des coefficients</span>
+                    <strong>{{ modules.reduce((total, m) => total + m.coefficient, 0) }}</strong>
+                </div>
+                <h2 style="margin-top: 19px; font-size: 15px;">Modules à rattraper</h2>
+                <ul v-if="modulesARattraper.length > 0" class="liste-rattrapage">
+                    <li v-for="m in modulesARattraper" :key="m.id">
+                        {{ m.nom }} — <strong>{{ m.note }}/20</strong>
+                    </li>
+                </ul>
+                <p v-else class="description" style="margin-top: 12px;">Aucun module à rattraper.</p>
+            </section>
+        </div>
+
+        <section class="panneau">
+            <div class="titre-ligne">
+                <h2>Classement des modules</h2>
+                <div class="outil">
+                    <input type="search" v-model="recherche" placeholder="Rechercher un module..." aria-label="Rechercher un module">
+                    <span class="compteur">{{ modulesAffiches.length }} affiché(s)</span>
+                </div>
+            </div>
+            <p class="description">Classés par note décroissante. La recherche ne modifie pas les statistiques globales.</p>
+
+            <div v-if="modulesAffiches.length > 0">
+                <article v-for="(module, index) in modulesAffiches" :key="module.id" class="module">
+                    <div class="ligne-module">
+                        <div>
+                            <div class="nom">{{ module.nom }}</div>
+                            <div class="sous-texte">Coefficient : {{ module.coefficient }} · Rang affiché : {{ index + 1 }}</div>
+                        </div>
+                        <div>
+                            <div class="note" :class="module.note < 10 ? 'faible' : 'bonne'">
+                                {{ module.note.toFixed(2) }} /20
+                            </div>
+                            <span class="mention" :class="module.note < 10 ? 'rattrapage' : 'ok'">
+                                {{ module.note < 10 ? 'À rattraper' : 'Validé' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="barre">
+                        <div class="progression" :class="{ faible: module.note < 10 }"
+                             :style="{ width: (module.note / 20 * 100) + '%' }"></div>
+                    </div>
+                    <div class="actions">
+                        <button type="button" class="bouton secondaire" @click="toggleDetail(module)">
+                            {{ moduleDetailId === module.id ? 'Masquer le détail' : 'Voir le détail' }}
+                        </button>
+                        <button type="button" class="bouton supprimer" @click="supprimerModule(module)">
+                            Supprimer
+                        </button>
+                    </div>
+                    <div class="detail" v-show="moduleDetailId === module.id">
+                        <div><strong>Module :</strong> {{ module.nom }}</div>
+                        <div><strong>Note :</strong> {{ module.note.toFixed(2) }}/20</div>
+                        <div><strong>Coefficient :</strong> {{ module.coefficient }}</div>
+                        <div><strong>Note pondérée :</strong> {{ (module.note * module.coefficient).toFixed(2) }}</div>
+                        <div><strong>Statut :</strong> {{ module.note >= 10 ? 'Validé' : 'À rattraper' }}</div>
+                    </div>
+                </article>
+            </div>
+            <div v-else class="vide">Aucun module à afficher pour cette recherche.</div>
+        </section>
+        <p class="footer">ENSA Safi · TP 1C – Tableau de bord de notes · Vue.js 3</p>
+    </main>
+</div>
+
+<script>
+const app = Vue.createApp({
+    data() {
+        return {
+            recherche: "",
+            moduleDetailId: null,
+            prochainId: 7,
+            nouveauModule: { nom: "", note: null, coefficient: 1 },
+            modules: [
+                { id: 1, nom: "Algorithmique", note: 16.5, coefficient: 3 },
+                { id: 2, nom: "Bases de données", note: 13, coefficient: 3 },
+                { id: 3, nom: "Développement Web", note: 9, coefficient: 2 },
+                { id: 4, nom: "Réseaux", note: 14.5, coefficient: 2 },
+                { id: 5, nom: "Mathématiques", note: 8.5, coefficient: 2 },
+                { id: 6, nom: "Anglais", note: 17, coefficient: 1 }
+            ]
+        };
+    },
+    computed: {
+        moyenneGenerale() {
+            const sommePonderee = this.modules.reduce(
+                (total, module) => total + module.note * module.coefficient, 0
+            );
+            const sommeCoefficients = this.modules.reduce(
+                (total, module) => total + module.coefficient, 0
+            );
+            if (sommeCoefficients === 0) return 0;
+            return Number((sommePonderee / sommeCoefficients).toFixed(2));
+        },
+        modulesARattraper() {
+            return this.modules.filter(module => module.note < 10);
+        },
+        modulesTries() {
+            return [...this.modules].sort((a, b) => b.note - a.note);
+        },
+        modulesAffiches() {
+            const texte = this.recherche.trim().toLowerCase();
+            return this.modulesTries.filter(module =>
+                module.nom.toLowerCase().includes(texte)
+            );
+        },
+        moduleMax() {
+            return this.modulesTries.length > 0 ? this.modulesTries[0] : null;
+        },
+        moduleMin() {
+            return this.modulesTries.length > 0
+                ? this.modulesTries[this.modulesTries.length - 1]
+                : null;
+        }
+    },
+    methods: {
+        tousValides() {
+            return this.modules.every(module => module.note >= 10);
+        },
+        ajouterModule() {
+            const nom = this.nouveauModule.nom.trim();
+            const note = Number(this.nouveauModule.note);
+            const coefficient = Number(this.nouveauModule.coefficient);
+            if (!nom || this.nouveauModule.note === null ||
+                !Number.isFinite(note) || note < 0 || note > 20 ||
+                !Number.isFinite(coefficient) || coefficient <= 0) {
+                return;
+            }
+            this.modules.push({
+                id: this.prochainId++,
+                nom: nom,
+                note: note,
+                coefficient: coefficient
+            });
+            this.nouveauModule = { nom: "", note: null, coefficient: 1 };
+        },
+        supprimerModule(module) {
+            this.modules = this.modules.filter(m => m.id !== module.id);
+            if (this.moduleDetailId === module.id) this.moduleDetailId = null;
+        },
+        toggleDetail(module) {
+            this.moduleDetailId = this.moduleDetailId === module.id ? null : module.id;
+        }
+    }
+});
+app.mount("#app");
+</script>
+</body>
+</html>
