@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock d'une association</title>
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        :root { --vert: #176b3a; --vert-fonce: #12532d; --vert-clair: #eaf5ed; --bordure: #d6e5da; --fond: #f4f8f4; --texte: #24352a; }
+        * { box-sizing: border-box; }
+        body { font-family: "Segoe UI", Trebuchet MS, sans-serif; margin: 0; padding: 28px 16px; background: var(--fond); color: var(--texte); }
+        #app { max-width: 980px; margin: auto; }
+        header { margin-bottom: 22px; }
+        h1 { margin-bottom: 6px; color: var(--vert); }
+        h2 { margin-top: 0; font-size: 1.3rem; }
+        .sous-titre { color: #66738a; margin-top: 4px; }
+        .panneau { background: white; border: 1px solid var(--bordure); padding: 23px; border-radius: 12px; margin-bottom: 18px; }
+        .alerte-globale { background: #fff0f0; color: #9d2635; padding: 15px 18px; border: 1px solid #f2b4b9; border-radius: 10px; margin-bottom: 18px; }
+        .resume { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 18px; }
+        .stat { background: white; border: 1px solid var(--bordure); padding: 20px; border-radius: 12px; }
+        .stat .libelle { color: #607088; margin-bottom: 8px; }
+        .stat .nombre { font-size: 1.85rem; font-weight: bold; color: var(--vert); }
+        .champs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+        .champs.ajout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .champ label { display: block; margin-bottom: 7px; font-weight: bold; font-size: 0.93rem; }
+        input, select { width: 100%; border: 1px solid #bdc9d8; border-radius: 7px; padding: 10px 11px; font: inherit; background: white; }
+        input:focus, select:focus { outline: 2px solid #b6d0ff; border-color: var(--vert); }
+        button { font: inherit; padding: 9px 13px; background: white; border: 1px solid #bdc9d8; border-radius: 7px; cursor: pointer; }
+        button:hover { background: var(--vert-clair); border-color: #9bc8a7; }
+        button.principal { background: var(--bleu); color: white; border-color: var(--vert); }
+        button.principal:hover { background: var(--vert-fonce); }
+        button.danger { color: #ac2737; border-color: #ebbdc2; }
+        button.danger:hover { background: #fff0f0; }
+        button:disabled { cursor: not-allowed; opacity: .5; }
+        .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+        .actions button { margin: 0; }
+        .article { border: 1px solid var(--bordure); border-radius: 10px; padding: 18px; margin-top: 13px; transition: border-color .2s, box-shadow .2s; }\n        .article:hover { border-color: #a8cdb1; box-shadow: 0 3px 12px #176b3a10; }
+        .entete-article { display: flex; justify-content: space-between; align-items: start; gap: 14px; }
+        .article h3 { margin: 0 0 6px; font-size: 1.13rem; }
+        .categorie { color: #67758c; font-size: .92rem; }
+        .quantite { margin-top: 12px; }
+        .badge { display: inline-block; padding: 5px 10px; border-radius: 20px; font-size: .85rem; font-weight: bold; white-space: nowrap; }
+        .badge.rupture { background: #fde8e8; color: #a32033; }
+        .badge.faible { background: #fff1d3; color: #986000; }
+        .badge.ok { background: #ddf7e9; color: #116238; }
+         .detail { background: #edf6ef; border-radius: 8px; padding: 12px 15px; margin-top: 12px; }
+        .detail p { margin: 7px 0; }
+        .reappro { padding: 13px; margin-top: 12px; border: 1px solid #c5ddcb; border-radius: 8px; }
+        .reappro label { display: block; margin-bottom: 8px; font-weight: bold; }
+        .ligne-reappro { display: flex; flex-wrap: wrap; gap: 10px; }
+        .ligne-reappro input { max-width: 150px; }
+        .message-vide { background: #f0f7f1; padding: 16px; border-radius: 8px; color: #647087; }
+        .message-erreur { color: #ad2639; margin-bottom: 0; }
+        [v-cloak] { display: none; }
+        @media (max-width: 620px) {
+            body { padding: 15px 11px; }
+            .panneau { padding: 17px; }
+            .champs, .champs.ajout, .resume { grid-template-columns: 1fr; }
+            .entete-article { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak>
+    <header>
+        <h1>Stock d'une association étudiante</h1>
+    </header>
+
+    <div v-if="nombreRupture > 0" class="alerte-globale" role="alert">
+        Warning : {{ nombreRupture }} article(s) en rupture de stock !
+    </div>
+
+   
+    <div class="resume">
+        <div class="stat">
+            <div class="libelle">Valeur totale du stock</div>
+            <div class="nombre">{{ valeurTotaleStock.toFixed(2) }} DH</div>
+        </div>
+        <div class="stat">
+            <div class="libelle">Articles en rupture</div>
+            <div class="nombre">{{ nombreRupture }}</div>
+        </div>
+    </div>
+
+    
+    <section class="panneau">
+        <h2>Rechercher et filtrer</h2>
+        <div class="champs">
+            <div class="champ">
+                <label for="recherche">Nom de l'article</label>
+                <input id="recherche" type="text" v-model="rechercheTexte"
+                       placeholder="Exemple : eau, chips...">
+            </div>
+            <div class="champ">
+                <label for="filtre">Catégorie</label>
+                <select id="filtre" v-model="filtreCategorie">
+                    <option value="toutes">Toutes les catégories</option>
+                    <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+                </select>
+            </div>
+        </div>
+    </section>
+
+    
+    <section class="panneau">
+        <h2>Liste des articles ({{ articlesFiltres.length }})</h2>
+
+        <div v-if="articlesFiltres.length > 0">
+            <article v-for="article in articlesFiltres" :key="article.id" class="article">
+                <div class="entete-article">
+                    <div>
+                        <h3>{{ article.nom }}</h3>
+                        <span class="categorie">{{ article.categorie }}</span>
+                    </div>
+
+                   
+                    <span v-if="article.quantite === 0" class="badge rupture">Rupture</span>
+                    <span v-else-if="article.quantite <= article.seuilAlerte" class="badge faible">Stock faible</span>
+                    <span v-else class="badge ok">Ok</span>
+                </div>
+
+                <div class="quantite">
+                    <strong>Quantité :</strong> {{ article.quantite }}
+                    &nbsp;|&nbsp;
+                    <strong>Prix :</strong> {{ article.prixUnitaire.toFixed(2) }} DH
+                </div>
+
+                <div class="actions">
+                    <button type="button" @click="decrementer(article)" :disabled="article.quantite === 0"
+                            :aria-label="'Retirer une unité de ' + article.nom">−</button>
+                    <button type="button" @click="incrementer(article)"
+                            :aria-label="'Ajouter une unité à ' + article.nom">+</button>
+                    <button type="button" @click="toggleDetail(article)">
+                        {{ articleDetailId === article.id ? 'Masquer le détail' : 'Voir le détail' }}
+                    </button>
+                    <button type="button" @click="toggleReapprovisionnement(article)">
+                        Réapprovisionner
+                    </button>
+                    <button type="button" class="danger" @click="supprimerArticle(article)">Supprimer</button>
+                </div>
+
+                
+                <div class="detail" v-show="articleDetailId === article.id">
+                    <p><strong>Catégorie :</strong> {{ article.categorie }}</p>
+                    <p><strong>Prix unitaire :</strong> {{ article.prixUnitaire.toFixed(2) }} DH</p>
+                    <p><strong>Seuil d'alerte :</strong> {{ article.seuilAlerte }} unités</p>
+                    <p><strong>Valeur de cet article :</strong>
+                        {{ (article.quantite * article.prixUnitaire).toFixed(2) }} DH</p>
+                </div>
+
+          
+                <form class="reappro" v-show="articleReapproId === article.id"
+                      @submit.prevent="reapprovisionner(article)">
+                    <label :for="'reappro-' + article.id">Quantité à ajouter</label>
+                    <div class="ligne-reappro">
+                        <input :id="'reappro-' + article.id" type="number" min="1" step="1"
+                               v-model.number="quantiteReappro" required>
+                        <button type="submit" class="principal">Valider</button>
+                    </div>
+                </form>
+            </article>
+        </div>
+        <p v-else class="message-vide">Are you sure about it ??.</p>
+    </section>
+
+   
+    <section class="panneau">
+        <h2>Wanna add something else ??</h2>
+        <form @submit.prevent="ajouterArticle">
+            <div class="champs ajout">
+                <div class="champ">
+                    <label for="nom">Nom de l'article</label>
+                    <input id="nom" type="text" v-model="nouvelArticle.nom"
+                           placeholder="Exemple : Eau gazeuse" required>
+                </div>
+                <div class="champ">
+                    <label for="categorie">Catégorie</label>
+                    <select id="categorie" v-model="nouvelArticle.categorie">
+                        <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+                    </select>
+                </div>
+                <div class="champ">
+                    <label for="quantite">Quantité</label>
+                    <input id="quantite" type="number" min="0" step="1"
+                           v-model.number="nouvelArticle.quantite" required>
+                </div>
+                <div class="champ">
+                    <label for="prix">Prix unitaire (DH)</label>
+                    <input id="prix" type="number" min="0" step="0.01"
+                           v-model.number="nouvelArticle.prixUnitaire" required>
+                </div>
+                <div class="champ">
+                    <label for="seuil">Seuil d'alerte</label>
+                    <input id="seuil" type="number" min="0" step="1"
+                           v-model.number="nouvelArticle.seuilAlerte" required>
+                </div>
+            </div>
+            <p v-if="erreurAjout" class="message-erreur">{{ erreurAjout }}</p>
+            <div class="actions">
+                <button type="submit" class="principal">Ajouter l'article</button>
+            </div>
+        </form>
+    </section>
+</div>
+
+<script>
+const app = Vue.createApp({
+    data() {
+        return {
+            rechercheTexte: "",
+            filtreCategorie: "toutes",
+            categories: ["Boissons", "Snacks", "Matériel"],
+            articleDetailId: null,
+            articleReapproId: null,
+            quantiteReappro: 1,
+            erreurAjout: "",
+            prochainId: 7,
+
+            
+            articles: [
+                { id: 1, nom: "Eau minérale", categorie: "Boissons", quantite: 16, prixUnitaire: 3, seuilAlerte: 5 },
+                { id: 2, nom: "Coca-Cola", categorie: "Boissons", quantite: 2, prixUnitaire: 6, seuilAlerte: 5 },
+                { id: 3, nom: "Jus d'orange", categorie: "Boissons", quantite: 0, prixUnitaire: 5, seuilAlerte: 3 },
+                { id: 4, nom: "Chips", categorie: "Snacks", quantite: 8, prixUnitaire: 4, seuilAlerte: 3 },
+                { id: 5, nom: "Biscuits", categorie: "Snacks", quantite: 1, prixUnitaire: 3, seuilAlerte: 2 },
+                { id: 6, nom: "Gobelets", categorie: "Matériel", quantite: 30, prixUnitaire: 0.5, seuilAlerte: 10 }
+            ],
+            nouvelArticle: {
+                nom: "",
+                categorie: "Boissons",
+                quantite: 0,
+                prixUnitaire: 0,
+                seuilAlerte: 3
+            }
+        };
+    },
+
+    computed: {
+        
+        articlesFiltres() {
+            const texte = this.rechercheTexte.trim().toLowerCase();
+            return this.articles.filter(article => {
+                const correspondNom = article.nom.toLowerCase().includes(texte);
+                const correspondCategorie = this.filtreCategorie === "toutes" ||
+                                            article.categorie === this.filtreCategorie;
+                return correspondNom && correspondCategorie;
+            });
+        },
+
+       
+        valeurTotaleStock() {
+            return this.articles.reduce((total, article) =>
+                total + article.quantite * article.prixUnitaire, 0);
+        },
+        nombreRupture() {
+            return this.articles.filter(article => article.quantite === 0).length;
+        }
+    },
+
+    methods: {
+        incrementer(article) {
+            article.quantite++;
+        },
+        decrementer(article) {
+            if (article.quantite > 0) {
+                article.quantite--;
+            }
+        },
+
+        toggleDetail(article) {
+            this.articleDetailId = this.articleDetailId === article.id ? null : article.id;
+        },
+        supprimerArticle(article) {
+            this.articles = this.articles.filter(a => a.id !== article.id);
+            if (this.articleDetailId === article.id) this.articleDetailId = null;
+            if (this.articleReapproId === article.id) this.articleReapproId = null;
+        },
+        ajouterArticle() {
+            const a = this.nouvelArticle;
+            const entiersValides = Number.isInteger(a.quantite) && a.quantite >= 0 &&
+                                   Number.isInteger(a.seuilAlerte) && a.seuilAlerte >= 0;
+            const prixValide = typeof a.prixUnitaire === "number" &&
+                               Number.isFinite(a.prixUnitaire) && a.prixUnitaire >= 0;
+            if (!a.nom.trim() || !entiersValides || !prixValide) {
+                this.erreurAjout = "Veuillez remplir correctement tous les champs.";
+                return;
+            }
+            this.articles.push({
+                id: this.prochainId++,
+                nom: a.nom.trim(),
+                categorie: a.categorie,
+                quantite: a.quantite,
+                prixUnitaire: a.prixUnitaire,
+                seuilAlerte: a.seuilAlerte
+            });
+            this.nouvelArticle = {
+                nom: "", categorie: "Boissons", quantite: 0,
+                prixUnitaire: 0, seuilAlerte: 3
+            };
+            this.erreurAjout = "";
+        },
+
+        toggleReapprovisionnement(article) {
+            this.articleReapproId = this.articleReapproId === article.id ? null : article.id;
+            this.quantiteReappro = 1;
+        },
+        reapprovisionner(article) {
+            if (!Number.isInteger(this.quantiteReappro) || this.quantiteReappro <= 0) return;
+            article.quantite += this.quantiteReappro;
+            this.articleReapproId = null;
+            this.quantiteReappro = 1;
+        }
+    }
+});
+
+app.mount("#app");
+</script>
+</body>
+</html>
